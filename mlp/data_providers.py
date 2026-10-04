@@ -147,7 +147,9 @@ class MNISTDataProvider(DataProvider):
     #    return inputs_batch, self.to_one_of_k(targets_batch)
     
     def __next__(self):
-        return self.next()
+        inputs_batch, targets_batch = super(MNISTDataProvider, self).next()
+        
+        return inputs_batch, self.to_one_of_k(targets_batch)
 
     def to_one_of_k(self, int_targets):
         """Converts integer coded class target to 1 of K coded targets.
@@ -164,7 +166,14 @@ class MNISTDataProvider(DataProvider):
             to zero except for the column corresponding to the correct class
             which is equal to one.
         """
-        raise NotImplementedError()
+        #result = np.ones((len(int_targets),10))
+        #identity_matrix = np.eye(10)
+        
+        #for i, target in enumerate(int_targets):
+            #result[i] *= identity_matrix[target]
+        
+        #return result
+        return np.eye(10)[int_targets]
 
 
 class MetOfficeDataProvider(DataProvider):
@@ -195,21 +204,35 @@ class MetOfficeDataProvider(DataProvider):
             'Data file does not exist at expected path: ' + data_path
         )
         #TODO: load raw data from text file
+        loaded = np.loadtxt(data_path, skiprows = 3)
         
         #TODO: filter out all missing datapoints and flatten to a vector
+        filtered_data = loaded[loaded != -99.9]        
         
         #TODO: normalise data to zero mean, unit standard deviation
+        filtered_data = loaded[loaded != -99.9]
+        data_mean = np.mean(filtered_data)
+        data_std = np.std(filtered_data)
+        normalized_data = (filtered_data - (data_mean))/data_std
 
         #TODO: convert from flat sequence to windowed data
+        windowed_data = np.lib.stride_tricks.sliding_window_view(normalized_data, window_size)
+        # Another way of doing it, use list comprehension
+        # windowed_data = np.array([
+        #     normalized_data[i:i + window_size] 
+        #     for i in range (len(normalized_data) - window_size + 1)
+        # ])
 
         #TODO: separate into inputs and targets
         # inputs are the first (window_size - 1) entries in windows
         # inputs = ...
         # targets are the last entries in windows
         # targets = ...
+        inputs = windowed_data[:,:window_size - 1]
+        targets = windowed_data[:, window_size - 1]
         
         # initialise base class with inputs and targets arrays (uncomment below)
-        # super(MetOfficeDataProvider, self).__init__(
-        #     inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
+        super(MetOfficeDataProvider, self).__init__(
+            inputs, targets, batch_size, max_num_batches, shuffle_order, rng)
     def __next__(self):
             return self.next()

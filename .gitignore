@@ -63,6 +63,7 @@ target/
 
 # Notebook stuff
 notebooks/.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
 
 # Local planning and agent files
 .claude/
