@@ -63,3 +63,22 @@ target/
 notebooks/.ipynb_checkpoints/
 
 .vscode
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Coursework files
+CW1_WEEKEND_PLAN-NEW.md
+MLP2026_27_CW1_Spec.pdf
+
+# MLP directory
+mlp/
+
+# Python script
+notebooks/run_cw1.py
+
+# LaTeX generated files
+report/*.bbl
+report/*.blg
+report/*.out
+report/*.pdf
