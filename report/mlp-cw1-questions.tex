@@ -19,6 +19,9 @@
 %
 % Please refer to the coursework specification for more details.
 
+\makeatletter
+\setlength{\@dblfptop}{0pt}
+\makeatother
 
 %% - - - - - - - - - - - - TEXT QUESTIONS - - - - - - - - - - - - 
 
@@ -26,12 +29,42 @@
 
 %% Question 1:
 \newcommand{\questionOne} {
-\youranswer{Question 1 - Find and read the paper by Zou and Hastie (2005) specified in the coursework description. Explain na\"ive elastic net and its potential benefits. Cite the paper and provide relevant equations, considering both training and inference, explaining all variables and hyperparameters. Describe how you will implement this approach in PyTorch for the experiments in the next section.}
+\youranswer{Naive Elastic Net is a regularization technique which combines both Lasso and Ridge methods, aiming to overcome several Lasso's limitations: Elimination of relevant predictors in highly correlated predictors, restriction of selecting at most \(n\) predictors when \(p > n\)
+and its potentially worse performance compared to ridge regression in \(n > p\) case with high correlation predictors \citep{zou2005elasticnet}.
+
+Due to this combination, Naive Elastic Net also has Lasso's ability on shrinking weights and perform automatic variable selection, while also acquire Ridge's tendency to assign similar coefficient to highly correlated predictors, encouraging the selection of grouped variables \citep{zou2005elasticnet}. Grouped variables also solve Lasso's limitation of selecting limited predictors in \(p > n\) case. However, combining both penalties may introduce double shrinkage, which can increase bias and reduce prediction accuracy.
+
+Naive Elastic Net can be expressed as:
+
+\begin{equation}
+    E_{\text{NE}}(X,y,\theta)
+    = E_{\text{data}}(X,y,\theta)
+    + \lambda_1 \sum_j |\theta_j|
+    + \frac{\lambda_2}{2}\sum_j \theta_j^2
+    \label{eq:naive_elastic_net}
+\end{equation}
+
+where \(E_{\text{data}}\) denotes the cross-entropy loss on the model logits, \(\theta\) represent the model weights and biases, and \((X,y)\) as input-training pairs. \(\theta\) implementation also includes biases following the coursework's experimental settings. There are 2 hyperparameters on the Naive Elastic Net: \(\lambda_1\) which control the L1 regularization penalty and \(\lambda_2\) that is responsible for the L2 regularization penalty.
+
+During training, both penalties will be added to the existing cross-entropy loss function. Following \citet{zou2005elasticnet}, the hyperparameters \(\lambda_1\) and \(\lambda_2\) will be tuned by evaluating different combinations of both regularization strengths. In PyTorch, \texttt{abs()} and \texttt{square()} calculation will be done respectively to model parameters, before combining them with the loss function to perform backpropagation. However, these penalties will not be calculated during inference since the model will use its learned parameters to make predictions on unseen data. Configurations are compared using epoch-100 validation accuracy, with validation cross-entropy used to break ties. The generalisation gap is used to analyse overfitting.}
 }
 
 %% Question 2:
 \newcommand{\questionTwo} {
-\youranswer{Question 2 - Analyse and explain the results in Table~3 and Figure~4 on testing each regularization technique separately. While discussing na\"ive elastic net, mention how you decided on the hyperparameter values for it.
+\youranswer{Based on Table 3, dropout with an inclusion probability of \(q=0.97\) achieves the highest validation accuracy among the configurations currently reported, improving accuracy from \(84.0\%\) for the baseline to \(85.6\%\), an increase of \(1.6\) percentage points. Its training and validation
+cross-entropy are also lower, decreasing from \(0.242\) and \(0.530\) to \(0.229\) and \(0.447\), respectively. The generalisation gap therefore decreases from \(0.288\) to \(0.218\). These results suggest improved generalisation compared with the baseline.
+
+The dropout results show worsening validation performance as the inclusion probability decreases and dropout becomes stronger. At \(q=0.6\), validation accuracy falls to \(81.7\%\), while training cross-entropy increases to \(0.487\). This is consistent with excessive dropout limiting the model's ability to fit the training data. Figure 4 also shows that the generalisation gap increases as the inclusion probability increases. However, a smaller gap alone does not indicate a better model as it has poorer validation accuracy. In this experiment, relatively weak dropout provides a better balance between fitting the data and controlling overfitting.
+
+L1 and L2 regularisation show contrasting results. All reported L1 configurations perform worse than the baseline in validation accuracy. Increasing the L1 coefficient from \(5\times10^{-4}\) to \(10^{-3}\) decreases validation accuracy from \(79.6\%\) to \(73.94\%\). At the two largest coefficients, accuracy falls to approximately \(2.1\%\), close to chance-level performance for \(47\) classes, while both training and validation cross-entropy reach approximately \(3.850\). The small generalisation gaps in these configurations therefore reflect severe underfitting rather than successful generalisation. These results suggest that the model is sensitive to the tested L1 penalty strengths.
+
+In contrast, moderate L2 regularisation improves validation accuracy. The best reported L2 configuration, \(\lambda_2=10^{-3}\), achieves \(84.82\%\) validation accuracy and validation cross-entropy of \(0.455\), compared with \(84.0\%\) and \(0.530\) for the baseline. Its generalisation
+gap is also smaller, at \(0.094\). However, increasing the coefficient to \(5\times10^{-2}\) reduces validation accuracy to \(44.2\%\), with similarly high training and validation cross-entropy. This again suggests underfitting caused by excessive regularisation. Although L2 performs better than L1 at the tested strengths, these experiments do not directly establish whether feature correlation explains this difference.
+
+Label smoothing with \(\alpha=0.1\) improves validation accuracy to \(85.17\%\) and reduces the generalisation gap to \(0.156\). However, validation cross-entropy increases from \(0.530\) for the baseline to \(0.554\). The smaller gap partly reflects increased training cross-entropy and should not, by itself, be interpreted as improved generalisation.
+
+For naïve elastic net, the initial coefficient choices were informed by the strongest validation results among the individual L1 and L2 configurations, \(5\times10^{-4}\) and \(10^{-3}\), respectively. From that basis, the model is tested in both increasing and decreasing params combination totaling to 10 values. 0.00005 and 0.00005 are chosen. The selected configuration used
+\(\lambda_1=\lambda_2=5\times10^{-5}\). Its resulted on \(84.72\%\) validation accuracy with \(0.457\) validation cross-entropy result. The preference for weaker combined penalties compared to initial best results are showing double shrinkage probability as \citet{zou2005elasticnet} stated it as potential side effect of this technique.
 }
 }
 
@@ -43,7 +76,15 @@
 
 %% Question 4:
 \newcommand{\questionFour} {
-\youranswer{Question 4 - Explain the experimental settings, including hyperparameters, and analyse the results in Tables~3 and~4 and Figures~4 and~5 in terms of generalisation performance and overfitting. Report epoch-100 results. Report ordinary cross-entropy against the original, unsmoothed labels, excluding all weight penalties. Follow the supplied notebook's convention for measuring training error and state that convention. Select the best configuration from Tables~3 and~4 using epoch-100 validation accuracy, using validation cross-entropy to break ties. Evaluate the selected model on the test set only after completing this selection, and report and discuss its test performance.}
+\youranswer{All individual-method experiments used a multi layered network with three hidden layers, each containing 128 ReLU units, and resulted to 47 output units. Weights were initialised using Xavier uniform initialisation, while biases were initialised to zero. Models were trained using Adam with a learning rate of \(10^{-4}\), a batch size of 100, and 100 epochs. The random seed was reset
+to 111020 before each experiment, with a fresh model and data loaders created for each run. Regularisation hyperparameters are reported in Table~3
+
+Table~3 reports epoch-100 results. Training error was measured by evaluating the current model on the training loader after each epoch in evaluation mode without any additional regularisation technique. Training and validation errors calculation used ordinary cross-entropy calculation against the original, unsmoothed labels.
+
+The results in Table~3 and Figure~4 are analysed in Question~2. They suggest that appropriately chosen regularisation can improve validation performance while also reducing generalisation gap, whereas excessive regularisation causes underfitting. However the experiments also highlight small generalisation gap performance in inaccurate model, inlining the importance of accuracy as the main model's performance evaluation.
+----
+Remaining discussion remain pending for CW2 as it lacks both table 4 and figure 5 data.
+}
 }
 
 
@@ -106,13 +147,13 @@
 \begin{figure*}[t]
     \centering
     \begin{subfigure}{.475\linewidth}
-        \includegraphics[width=\linewidth]{figures/empty_dropout_plot.png}
+        \includegraphics[width=\linewidth]{figures/dropout_accuracy.png}
         \caption{Validation accuracy and generalisation gap by inclusion probability.}
         \label{fig:dropoutrates}
     \end{subfigure} 
     \begin{subfigure}{.475\linewidth}
         \centering
-        \includegraphics[width=\linewidth]{figures/empty_wd_plot.png}
+        \includegraphics[width=\linewidth]{figures/regularization_accuracy.png}
         \caption{Validation accuracy and generalisation gap by penalty coefficient.}
         \label{fig:weightrates}
     \end{subfigure} 
@@ -188,25 +229,25 @@ Question Table 3 - Fill in Table 3 with the results from your experiments for th
     \midrule
         \multirow{4}*{Dropout}
                  & 0.6                   & 81.7 & 0.487 & 0.551 \\
-                 & 0.7 & --.- & -.--- & -.---  \\
+                 & 0.7 & 83.34 & 0.405 & 0.486  \\
                  & 0.85 & 85.2 & 0.305 & 0.429 \\
-                 & 0.97 & 85.6 & 0.229 & 0.447 \\
+                 & \textbf{0.97} & \textbf{85.6} & \textbf{0.229} & \textbf{0.447} \\
     \midrule
         \multirow{4}*{L1 penalty}
-                 & 5e-4 & 79.6 & 0.643 & 0.663 \\
-                 & 1e-3 & --.- & -.--- & -.--- \\
+                 & \emph{5e-4} & \emph{79.6} & \emph{0.643} & \emph{0.663} \\
+                 & 1e-3 & 73.94 & 0.873 & 0.885 \\
                  & 5e-3 & 2.19 & 3.850 & 3.850 \\
                  & 5e-2 & 2.13 & 3.850 & 3.850 \\
     \midrule
         \multirow{4}*{L2 penalty}  
                  & 5e-4 & 84.6 & 0.312 & 0.460 \\
-                 & 1e-3 & --.- & -.--- & -.--- \\
+                 & \emph{1e-3} & \emph{84.82} & \emph{0.361} & \emph{0.455} \\
                  & 5e-3 & 81.7 & 0.579 & 0.601 \\
                  & 5e-2 & 44.2 & 2.117 & 2.118 \\
     \midrule
-        Label smoothing & 0.1 & --.- & -.--- & -.--- \\
+        Label smoothing & 0.1 & 85.17 & 0.398 & 0.554 \\
     \midrule
-        Na\"ive Elastic Net & --.- & --.- & -.--- & -.--- \\
+        Na\"ive Elastic Net & 0.00005, 0.00005 & 84.72 & 0.329 & 0.457 \\
     \bottomrule
     \end{tabular}
     \caption{Results of the individual-method experiments.
